@@ -3,6 +3,8 @@ package com.tee.flink.jdk8.flinkstudyjdk8.task;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.calcite.config.Lex;
+import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
@@ -18,6 +20,7 @@ import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.SqlDialect;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.catalog.hive.HiveCatalog;
+import org.apache.flink.table.planner.delegation.FlinkSqlParserFactories;
 import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
 import org.springframework.stereotype.Component;
@@ -35,6 +38,7 @@ public class FlinkToHiveComponent {
 
     public static void main(String[] args) {
         new FlinkToHiveComponent().trigger();
+
     }
 
     public void trigger() {
@@ -42,10 +46,8 @@ public class FlinkToHiveComponent {
         env.setParallelism(1);
         env.enableCheckpointing(5000, CheckpointingMode.EXACTLY_ONCE);
 
-//        EnvironmentSettings settings = EnvironmentSettings.newInstance().useBlinkPlanner().build();
-//        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
-
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env);
+        EnvironmentSettings settings = EnvironmentSettings.inStreamingMode();
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
 
         String catalogName = "hive_catalog";
         HiveCatalog catalog = new HiveCatalog(
@@ -61,9 +63,9 @@ public class FlinkToHiveComponent {
         tableEnv.executeSql("CREATE DATABASE IF NOT EXISTS cdc");
         tableEnv.executeSql("DROP TABLE IF EXISTS cdc.demo");
         tableEnv.executeSql("CREATE TABLE cdc.demo(\n" +
-                "    id INT,\n" +
+                "    id INT PRIMARY KEY NOT ENFORCED,\n" +
                 "    actor STRING,\n" +
-                "    alias TIMESTAMP\n" +
+                "    alias STRING \n" +
                 ") WITH (\n" +
                 "  'connector' = 'mysql-cdc',\n" +
                 "  'hostname' = 'localhost',\n" +
@@ -77,15 +79,15 @@ public class FlinkToHiveComponent {
         tableEnv.executeSql("CREATE DATABASE IF NOT EXISTS kafka");
         tableEnv.executeSql("DROP TABLE IF EXISTS kafka.demo");
         tableEnv.executeSql("CREATE TABLE kafka.demo (\n" +
-                "  id INT,\n" +
+                "  id INT ,\n" +
                 "  actor STRING,\n" +
-                "  alias TIMESTAMP\n" +
+                "  alias STRING\n" +
                 ") WITH (\n" +
                 "  'connector' = 'kafka',\n" +
                 "  'topic' = 'flink-cdc-topic',\n" +
                 "  'scan.startup.mode' = 'earliest-offset',\n" +
                 "  'properties.bootstrap.servers' = 'localhost:9092',\n" +
-                "  'format' = 'changelog-json'\n" +
+                "  'format' = 'json'\n" +
                 ")");
 
         tableEnv.executeSql("INSERT INTO kafka.demo \n" +
