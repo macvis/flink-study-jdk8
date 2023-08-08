@@ -1,0 +1,12 @@
+server:
+    port: 8083
+
+
+logging:
+    level:
+        com.tee: info
+        org.apache.flink: error
+        org.apache.hadoop: error
+        io.debezium: error
+        com.ververica: error
+        com.github.shyiko: error
