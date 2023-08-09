@@ -28,10 +28,10 @@ import java.util.Properties;
  */
 @Slf4j
 @Component
-public class FlinkToHiveComponent {
+public class FlinkToHiveTask {
 
     public static void main(String[] args) {
-        new FlinkToHiveComponent().trigger();
+        new FlinkToHiveTask().trigger();
 
     }
 

@@ -1,7 +1,7 @@
 package com.tee.flink.jdk8.flinkstudyjdk8.api;
 
-import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlCdcReadComponent;
-import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlJdbcReadComponent;
+import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlCdcReadTask;
+import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlJdbcReadTask;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,19 +20,19 @@ import java.util.concurrent.CompletableFuture;
 public class DemoController {
 
     @Autowired
-    private MySqlCdcReadComponent mySqlCdcReadComponent;
+    private MySqlCdcReadTask mySqlCdcReadTask;
 
     @GetMapping("/mysql-cdc-read")
     public String triggerMySqlCdcRead(){
-        CompletableFuture.runAsync(mySqlCdcReadComponent:: trigger);
+        CompletableFuture.runAsync(mySqlCdcReadTask:: trigger);
         return "OK";
     }
 
     @Autowired
-    private MySqlJdbcReadComponent mySqlJdbcReadComponent;
+    private MySqlJdbcReadTask mySqlJdbcReadTask;
     @GetMapping("/jdbc-read")
     public String triggerMySqlJdbcRead(){
-        CompletableFuture.runAsync(mySqlJdbcReadComponent:: trigger);
+        CompletableFuture.runAsync(mySqlJdbcReadTask:: trigger);
         return "OK";
     }
 }

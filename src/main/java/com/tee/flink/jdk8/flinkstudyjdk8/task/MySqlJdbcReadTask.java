@@ -15,10 +15,10 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public class MySqlJdbcReadComponent {
+public class MySqlJdbcReadTask {
 
     public static void main(String[] args) {
-        new MySqlJdbcReadComponent().trigger();
+        new MySqlJdbcReadTask().trigger();
     }
 
     public void trigger(){
