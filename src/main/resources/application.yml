@@ -7,6 +7,7 @@ logging:
         com.tee: info
         org.apache.flink: error
         org.apache.hadoop: error
+        org.apache.kafka: error
         io.debezium: error
         com.ververica: error
         com.github.shyiko: error

@@ -1,5 +1,6 @@
 package com.tee.flink.jdk8.flinkstudyjdk8.api;
 
+import com.tee.flink.jdk8.flinkstudyjdk8.task.FlinkToHiveSQLTask;
 import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlCdcReadTask;
 import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlJdbcReadTask;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +25,7 @@ public class DemoController {
 
     @GetMapping("/mysql-cdc-read")
     public String triggerMySqlCdcRead(){
-        CompletableFuture.runAsync(mySqlCdcReadTask:: trigger);
+        CompletableFuture.runAsync(mySqlCdcReadTask :: trigger);
         return "OK";
     }
 
@@ -32,7 +33,15 @@ public class DemoController {
     private MySqlJdbcReadTask mySqlJdbcReadTask;
     @GetMapping("/jdbc-read")
     public String triggerMySqlJdbcRead(){
-        CompletableFuture.runAsync(mySqlJdbcReadTask:: trigger);
+        CompletableFuture.runAsync(mySqlJdbcReadTask :: trigger);
+        return "OK";
+    }
+
+    @Autowired
+    private FlinkToHiveSQLTask flinkToHiveSQLTask;
+    @GetMapping("/flink-to-hive")
+    public String triggerFlinkToHiveTask(){
+        CompletableFuture.runAsync(flinkToHiveSQLTask :: trigger);
         return "OK";
     }
 }

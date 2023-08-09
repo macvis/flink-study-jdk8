@@ -18,10 +18,10 @@ import org.apache.flink.util.Collector;
  * @date 2023/8/8.
  */
 @Slf4j
-public class FlinkToHiveUsingAPI {
+public class FlinkToHiveBySocketAPI {
 
     public static void main(String[] args) {
-        new FlinkToHiveUsingAPI().trigger();
+        new FlinkToHiveBySocketAPI().trigger();
     }
 
     public void trigger() {

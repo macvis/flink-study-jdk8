@@ -14,6 +14,8 @@ import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumerBase;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.SqlDialect;
+import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.catalog.hive.HiveCatalog;
 import org.apache.flink.types.Row;
@@ -28,10 +30,10 @@ import java.util.Properties;
  */
 @Slf4j
 @Component
-public class FlinkToHiveTask {
+public class FlinkToHiveSQLTask {
 
     public static void main(String[] args) {
-        new FlinkToHiveTask().trigger();
+        new FlinkToHiveSQLTask().trigger();
 
     }
 
@@ -67,34 +69,43 @@ public class FlinkToHiveTask {
                 "  'username' = 'root',\n" +
                 "  'password' = '1234567890',\n" +
                 "  'database-name' = 'flinkdemo',\n" +
-                "  'table-name' = 'demo'\n" +
+                "  'table-name' = 'demo_for_hive'\n" +
                 ")");
+
+        Table cdcData = tableEnv.sqlQuery("select * from cdc.demo");
+        DataStream<Row> cdcDataStream = tableEnv.toChangelogStream(cdcData);
+        log.info("=========cdcData========");
+        cdcDataStream.print();
+        log.info("===========");
+
 
         tableEnv.executeSql("CREATE DATABASE IF NOT EXISTS kafka");
         tableEnv.executeSql("DROP TABLE IF EXISTS kafka.demo");
         tableEnv.executeSql("CREATE TABLE kafka.demo (\n" +
-                "  id INT ,\n" +
+                "  id INT PRIMARY KEY NOT ENFORCED,\n" +
                 "  actor STRING,\n" +
                 "  alias STRING\n" +
                 ") WITH (\n" +
-                "  'connector' = 'kafka',\n" +
+                "  'connector' = 'upsert-kafka',\n" +
                 "  'topic' = 'flink-cdc-topic',\n" +
                 "  'properties.group.id' = 'flink-cdc-group', \n" +
-                "  'scan.startup.mode' = 'group-offsets',\n" +
+                "  'properties.auto.offset.reset' = 'earliest',\n" +
                 "  'properties.bootstrap.servers' = 'localhost:9092',\n" +
-                "  'format' = 'json'\n" +
+                "  'key.format' = 'json'," +
+                "  'value.format' = 'json'\n" +
                 ")");
 
-        /**
-         * 这里进行不下去，报错
-         * Table sink 'hive_catalog.kafka.demo' doesn't support consuming update and delete changes
-         * which is produced by node TableSourceScan(table=[[hive_catalog, cdc, demo]], fields=[id, actor, alias])
-         * 	    at org.apache.flink.table.planner.plan.optimize.program.FlinkChangelogModeInferenceProgram$SatisfyModifyKindSetTraitVisitor.createNewNode(FlinkChangelogModeInferenceProgram.scala:405)
-         * 	    at org.apache.flink.table.planner.plan.optimize.program.FlinkChangelogModeInferenceProgram$SatisfyModifyKindSetTraitVisitor.visit(FlinkChangelogModeInferenceProgram.scala:328)
-         */
-        tableEnv.executeSql("INSERT INTO kafka.demo \n" +
-                "SELECT id, actor, alias \n" +
-                "FROM cdc.demo");
+        String insertSql = "INSERT INTO kafka.demo SELECT * FROM cdc.demo";
+        TableResult insertToKafkaResult = tableEnv.executeSql(insertSql);
+        log.info("======= {} =========", insertSql);
+        insertToKafkaResult.print();
+
+
+        Table kafkaData = tableEnv.sqlQuery("select * from kafka.demo");
+        DataStream<Row> kafkaDatStream = tableEnv.toChangelogStream(kafkaData);
+        log.info("=========kafkaData========");
+        kafkaDatStream.print();
+        log.info("=================");
 
         // 定义带op字段的stream
         Properties properties = new Properties();
@@ -148,12 +159,12 @@ public class FlinkToHiveTask {
         tableEnv.getConfig().setSqlDialect(SqlDialect.DEFAULT);
 
         try{
-            tableEnv.executeSql("INSERT INTO ods.demo \n" +
-                    "SELECT id, actor, alias,\n" +
-                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' yyyyMMdd ') as ts_date, \n" +
-                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' HH ') as ts_hour, \n" +
-                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' mm ') as ts_minute \n" +
-                    " FROM merged_demo");
+//            tableEnv.executeSql("INSERT INTO ods.demo \n" +
+//                    "SELECT id, actor, alias,\n" +
+//                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' yyyyMMdd ') as ts_date, \n" +
+//                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' HH ') as ts_hour, \n" +
+//                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' mm ') as ts_minute \n" +
+//                    " FROM merged_demo");
             env.execute("");
         }catch(Exception e){
             log.error("", e);
