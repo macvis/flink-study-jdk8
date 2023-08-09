@@ -3,16 +3,12 @@ package com.tee.flink.jdk8.flinkstudyjdk8.task;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.calcite.config.Lex;
-import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.streaming.api.CheckpointingMode;
-import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.environment.ExecutionCheckpointingOptions;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumerBase;
@@ -20,12 +16,10 @@ import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.SqlDialect;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.catalog.hive.HiveCatalog;
-import org.apache.flink.table.planner.delegation.FlinkSqlParserFactories;
 import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
 import java.util.Properties;
 
 /**
@@ -85,11 +79,19 @@ public class FlinkToHiveComponent {
                 ") WITH (\n" +
                 "  'connector' = 'kafka',\n" +
                 "  'topic' = 'flink-cdc-topic',\n" +
-                "  'scan.startup.mode' = 'earliest-offset',\n" +
+                "  'properties.group.id' = 'flink-cdc-group', \n" +
+                "  'scan.startup.mode' = 'group-offsets',\n" +
                 "  'properties.bootstrap.servers' = 'localhost:9092',\n" +
                 "  'format' = 'json'\n" +
                 ")");
 
+        /**
+         * 这里进行不下去，报错
+         * Table sink 'hive_catalog.kafka.demo' doesn't support consuming update and delete changes
+         * which is produced by node TableSourceScan(table=[[hive_catalog, cdc, demo]], fields=[id, actor, alias])
+         * 	    at org.apache.flink.table.planner.plan.optimize.program.FlinkChangelogModeInferenceProgram$SatisfyModifyKindSetTraitVisitor.createNewNode(FlinkChangelogModeInferenceProgram.scala:405)
+         * 	    at org.apache.flink.table.planner.plan.optimize.program.FlinkChangelogModeInferenceProgram$SatisfyModifyKindSetTraitVisitor.visit(FlinkChangelogModeInferenceProgram.scala:328)
+         */
         tableEnv.executeSql("INSERT INTO kafka.demo \n" +
                 "SELECT id, actor, alias \n" +
                 "FROM cdc.demo");
