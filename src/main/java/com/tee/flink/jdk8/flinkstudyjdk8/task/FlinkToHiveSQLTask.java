@@ -1,12 +1,8 @@
 package com.tee.flink.jdk8.flinkstudyjdk8.task;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.tee.flink.jdk8.flinkstudyjdk8.entity.Demo;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.typeinfo.Types;
-import org.apache.flink.api.java.typeutils.RowTypeInfo;
+import org.apache.flink.formats.json.JsonDeserializationSchema;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -15,7 +11,6 @@ import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumerBase;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.SqlDialect;
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.catalog.hive.HiveCatalog;
 import org.apache.flink.types.Row;
@@ -25,6 +20,12 @@ import org.springframework.stereotype.Component;
 import java.util.Properties;
 
 /**
+ * hive 不支持带有 update delete 的数据写入，不支持
+ *
+ *  这个 task 作废，代码保留
+ *
+ *
+ *
  * @author youchao.wen
  * @date 2023/8/7.
  */
@@ -95,46 +96,73 @@ public class FlinkToHiveSQLTask {
                 "  'value.format' = 'json'\n" +
                 ")");
 
-        String insertSql = "INSERT INTO kafka.demo SELECT * FROM cdc.demo";
-        TableResult insertToKafkaResult = tableEnv.executeSql(insertSql);
-        log.info("======= {} =========", insertSql);
-        insertToKafkaResult.print();
+//        String insertSql = "INSERT INTO kafka.demo SELECT * FROM cdc.demo";
+//        TableResult insertToKafkaResult = tableEnv.executeSql(insertSql);
+//        log.info("======= {} =========", insertSql);
+//        insertToKafkaResult.print();
 
 
-        Table kafkaData = tableEnv.sqlQuery("select * from kafka.demo");
-        DataStream<Row> kafkaDatStream = tableEnv.toChangelogStream(kafkaData);
-        log.info("=========kafkaData========");
-        kafkaDatStream.print();
-        log.info("=================");
+//        Table kafkaData = tableEnv.sqlQuery("select * from kafka.demo");
+//        DataStream<Row> kafkaDatStream = tableEnv.toChangelogStream(kafkaData);
+//        log.info("=========kafkaData========");
+//        kafkaDatStream.print();
+//        log.info("=================");
 
-        // 定义带op字段的stream
         Properties properties = new Properties();
         properties.setProperty("bootstrap.servers", "localhost:9092");
         properties.setProperty("group.id", "flink-cdc-group");
+        properties.setProperty("auto.offset.reset", "earliest");
 
-        FlinkKafkaConsumerBase<String> consumer = new FlinkKafkaConsumer<>(
-                "demo",
-                new SimpleStringSchema(),
+//        Schema schema = Schema.newBuilder()
+//                .column("id", DataTypes.INT())
+//                .column("actor", DataTypes.STRING())
+//                .column("alias", DataTypes.STRING())
+//                .build();
+
+        FlinkKafkaConsumerBase<Demo> consumer = new FlinkKafkaConsumer<>(
+                "flink-cdc-topic",
+                new JsonDeserializationSchema<>(Demo.class),
                 properties
         ).setStartFromEarliest();
 
-        DataStream<String> ds = env.addSource(consumer);
 
-        String[] fieldNames = {"id", "actor", "alias"};
-        TypeInformation[] types = {Types.LONG, Types.STRING, Types.STRING};
-        DataStream<Row> ds2 = ds.map(str -> {
-            JSONObject jsonObject = JSON.parseObject(str);
-            JSONObject data = jsonObject.getJSONObject("data");
-            int arity = fieldNames.length;
-            Row row = new Row(arity);
-            row.setField(0, data.get("id"));
-            row.setField(1, data.get("actor"));
-            row.setField(2, data.get("alias"));
+        DataStream<Demo> ds = env.addSource(consumer);
 
-            return row;
-        }, new RowTypeInfo(types, fieldNames));
+//        DataStream<Demo> ds2 = ds.map(str -> {
+//            JSONObject jsonObject = JSON.parseObject(str);
+//            JSONObject data = jsonObject.getJSONObject("data");
+//            Demo row = new Demo();
+//            row.setId(data.getLong("id"));
+//            row.setActor(data.getString("actor"));
+//            row.setAlias(data.getString("alias"));
+//
+//            return row;
+//        });
 
-        tableEnv.registerDataStream("merged_demo", ds2);
+//        tableEnv.registerDataStream("merged_demo", ds);
+
+//        Schema schema = Schema.newBuilder()
+//                .column("id", DataTypes.INT())
+//                .column("actor", DataTypes.STRING())
+//                .column("alias", DataTypes.STRING())
+//                .build();
+
+//        tableEnv.createTemporaryView("merged_demo", ds);
+
+//        System.out.println("existed table kafka.merged_demo =======");
+//        tableEnv.executeSql("existed table kafka.merged_demo").print();
+
+//        System.out.println("exists table merged_demo =======");
+//        tableEnv.executeSql("select * from merged_demo").print();
+
+
+
+//        Table tempData = tableEnv.sqlQuery("select * from kafka.merged_demo");
+//        DataStream<Row> tempDataStream = tableEnv.toChangelogStream(tempData);
+//        log.info("=========tempData========");
+//        tempDataStream.print();
+//        log.info("=================");
+
 
         tableEnv.getConfig().setSqlDialect(SqlDialect.HIVE);
 
@@ -142,29 +170,43 @@ public class FlinkToHiveSQLTask {
         tableEnv.executeSql("DROP TABLE IF EXISTS ods.demo");
 
         tableEnv.executeSql("CREATE TABLE ods.demo (\n" +
-                "  id INT,\n" +
+                "  id BIGINT,\n" +
                 "  actor STRING,\n" +
                 "  alias STRING\n" +
-                ") PARTITIONED BY (\n" +
-                "    ts_date STRING,\n" +
-                "    ts_hour STRING,\n" +
-                "    ts_minute STRING\n" +
-                ") STORED AS PARQUET TBLPROPERTIES (\n" +
+                ") " +
+//                "PARTITIONED BY (\n" +
+//                "    ts_date STRING,\n" +
+//                "    ts_hour STRING,\n" +
+//                "    ts_minute STRING\n" +
+//                ") " +
+                "STORED AS PARQUET TBLPROPERTIES (\n" +
                 "  'sink.partition-commit.trigger' = 'partition-time',\n" +
                 "  'sink.partition-commit.delay' = '1 min',\n" +
-                "  'sink.partition-commit.policy.kind' = 'metastore,success-file',\n " +
-                "  'partition.time-extractor.timestamp-pattern' = '$ts_date$ts_hour:$ts_minute:00 '\n" +
+                "  'sink.partition-commit.policy.kind' = 'metastore,success-file'\n " +
+//                "  , 'partition.time-extractor.timestamp-pattern' = '$ts_date$ts_hour:$ts_minute:00 '\n" +
         ")");
 
-        tableEnv.getConfig().setSqlDialect(SqlDialect.DEFAULT);
+        tableEnv.useDatabase("ods");
+
+//        Table table = tableEnv.fromDataStream(ds);
+//        table.executeInsert("demo");
+//
+//        tableEnv.createTemporaryView("merged_demo", tableEnv.from("demo"));
+//
+//        Table result = tableEnv.sqlQuery("SELECT * from merged_demo");
+//        DataStream<Row> rowDataStream = tableEnv.toChangelogStream(result);
+//        rowDataStream.print();
+//
+//        DataStream<Demo> writerStream = tableEnv.toDataStream(result, Demo.class);
+//        writerStream.print();
 
         try{
-//            tableEnv.executeSql("INSERT INTO ods.demo \n" +
-//                    "SELECT id, actor, alias,\n" +
-//                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' yyyyMMdd ') as ts_date, \n" +
+            tableEnv.executeSql("INSERT INTO ods.demo \n" +
+                    "SELECT id, actor, alias " +
+//                    ", DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' yyyyMMdd ') as ts_date, \n" +
 //                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' HH ') as ts_hour, \n" +
 //                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' mm ') as ts_minute \n" +
-//                    " FROM merged_demo");
+                    " FROM kafka.demo");
             env.execute("");
         }catch(Exception e){
             log.error("", e);
