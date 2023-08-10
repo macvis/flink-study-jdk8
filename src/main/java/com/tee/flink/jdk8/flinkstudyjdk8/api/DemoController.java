@@ -1,5 +1,6 @@
 package com.tee.flink.jdk8.flinkstudyjdk8.api;
 
+import com.tee.flink.jdk8.flinkstudyjdk8.task.FlinkToHdfsTask;
 import com.tee.flink.jdk8.flinkstudyjdk8.task.FlinkToHiveSQLTask;
 import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlCdcReadTask;
 import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlJdbcReadTask;
@@ -42,6 +43,14 @@ public class DemoController {
     @GetMapping("/flink-to-hive")
     public String triggerFlinkToHiveTask(){
         CompletableFuture.runAsync(flinkToHiveSQLTask :: trigger);
+        return "OK";
+    }
+
+    @Autowired
+    private FlinkToHdfsTask flinkToHdfsTask;
+    @GetMapping("/flink-to-hdfs")
+    public String triggerFlinkToHdfsTask(){
+        CompletableFuture.runAsync(flinkToHdfsTask :: trigger);
         return "OK";
     }
 }

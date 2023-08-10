@@ -274,6 +274,12 @@
             <version>3.3.6</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-runtime-web</artifactId>
+            <version>1.17.1</version>
+        </dependency>
+
     </dependencies>
 
     <build>
