@@ -165,28 +165,27 @@ public class FlinkToHiveSQLTask {
 
 
         tableEnv.getConfig().setSqlDialect(SqlDialect.HIVE);
+//        tableEnv.executeSql("CREATE DATABASE IF NOT EXISTS ods");
+//        tableEnv.executeSql("DROP TABLE IF EXISTS ods.demo");
 
-        tableEnv.executeSql("CREATE DATABASE IF NOT EXISTS ods");
-        tableEnv.executeSql("DROP TABLE IF EXISTS ods.demo");
-
-        tableEnv.executeSql("CREATE TABLE ods.demo (\n" +
-                "  id BIGINT,\n" +
-                "  actor STRING,\n" +
-                "  alias STRING\n" +
-                ") " +
-//                "PARTITIONED BY (\n" +
-//                "    ts_date STRING,\n" +
-//                "    ts_hour STRING,\n" +
-//                "    ts_minute STRING\n" +
+//        tableEnv.executeSql("CREATE TABLE ods.demo (\n" +
+//                "  id BIGINT,\n" +
+//                "  actor STRING,\n" +
+//                "  alias STRING\n" +
 //                ") " +
-                "STORED AS PARQUET TBLPROPERTIES (\n" +
-                "  'sink.partition-commit.trigger' = 'partition-time',\n" +
-                "  'sink.partition-commit.delay' = '1 min',\n" +
-                "  'sink.partition-commit.policy.kind' = 'metastore,success-file'\n " +
-//                "  , 'partition.time-extractor.timestamp-pattern' = '$ts_date$ts_hour:$ts_minute:00 '\n" +
-        ")");
+////                "PARTITIONED BY (\n" +
+////                "    ts_date STRING,\n" +
+////                "    ts_hour STRING,\n" +
+////                "    ts_minute STRING\n" +
+////                ") " +
+//                "STORED AS PARQUET TBLPROPERTIES (\n" +
+//                "  'sink.partition-commit.trigger' = 'partition-time',\n" +
+//                "  'sink.partition-commit.delay' = '1 min',\n" +
+//                "  'sink.partition-commit.policy.kind' = 'metastore,success-file'\n " +
+////                "  , 'partition.time-extractor.timestamp-pattern' = '$ts_date$ts_hour:$ts_minute:00 '\n" +
+//        ")");
 
-        tableEnv.useDatabase("ods");
+//        tableEnv.useDatabase("ods");
 
 //        Table table = tableEnv.fromDataStream(ds);
 //        table.executeInsert("demo");
@@ -200,17 +199,17 @@ public class FlinkToHiveSQLTask {
 //        DataStream<Demo> writerStream = tableEnv.toDataStream(result, Demo.class);
 //        writerStream.print();
 
-        try{
-            tableEnv.executeSql("INSERT INTO ods.demo \n" +
-                    "SELECT id, actor, alias " +
-//                    ", DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' yyyyMMdd ') as ts_date, \n" +
-//                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' HH ') as ts_hour, \n" +
-//                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' mm ') as ts_minute \n" +
-                    " FROM kafka.demo");
-            env.execute("");
-        }catch(Exception e){
-            log.error("", e);
-        }
+//        try{
+//            tableEnv.executeSql("INSERT INTO ods.demo \n" +
+//                    "SELECT id, actor, alias " +
+////                    ", DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' yyyyMMdd ') as ts_date, \n" +
+////                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' HH ') as ts_hour, \n" +
+////                    " DATE_FORMAT(TO_TIMESTAMP(create_time, 'yyyy-MM-dd HH:mm:ss '), ' mm ') as ts_minute \n" +
+//                    " FROM kafka.demo");
+//            env.execute("");
+//        }catch(Exception e){
+//            log.error("", e);
+//        }
 
     }
 
