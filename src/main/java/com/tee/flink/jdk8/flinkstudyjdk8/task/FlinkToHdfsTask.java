@@ -1,11 +1,16 @@
 package com.tee.flink.jdk8.flinkstudyjdk8.task;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.scala.typeutils.Types;
+import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.core.fs.FileSystem;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.sink.filesystem.bucketassigners.DateTimeBucketAssigner;
+import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.OnCheckpointRollingPolicy;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
@@ -89,16 +94,14 @@ public class FlinkToHdfsTask {
         kafkaString.print();
 
         String hdfsPath = "hdfs://47.243.131.115:8020/user/hive/warehouse/hdfs/writer.db/demo.csv";
-//        FileSink<String> sink = FileSink
-//                .forRowFormat(new Path(hdfsPath), new SimpleStringEncoder<String>("UTF-8"))
-//                .withRollingPolicy(OnCheckpointRollingPolicy.build())
-//                // 自定义分桶策略
-//                .withBucketAssigner(new DateTimeBucketAssigner<>("yyyy-MM-dd--HH"))
-//                .build();
-//        kafkaString.sinkTo(sink);
-        kafkaString.writeAsCsv(hdfsPath, FileSystem.WriteMode.OVERWRITE);
-
-
+        FileSink<String> sink = FileSink
+                .forRowFormat(new Path(hdfsPath), new SimpleStringEncoder<String>("UTF-8"))
+                .withRollingPolicy(OnCheckpointRollingPolicy.build())
+                // 自定义分桶策略
+                .withBucketAssigner(new DateTimeBucketAssigner<>("yyyy-MM-dd--HH"))
+                .build();
+        kafkaString.sinkTo(sink);
+//        kafkaString.writeAsCsv(hdfsPath, FileSystem.WriteMode.OVERWRITE);
 
         try{
             env.execute("Write to HDFS");
