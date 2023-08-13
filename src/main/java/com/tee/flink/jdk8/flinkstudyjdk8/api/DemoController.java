@@ -4,6 +4,7 @@ import com.tee.flink.jdk8.flinkstudyjdk8.task.FlinkToHdfsTask;
 import com.tee.flink.jdk8.flinkstudyjdk8.task.FlinkToHiveSQLTask;
 import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlCdcReadTask;
 import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlJdbcReadTask;
+import com.tee.flink.jdk8.flinkstudyjdk8.tool.HdfsFileCheck;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,6 +52,16 @@ public class DemoController {
     @GetMapping("/flink-to-hdfs")
     public String triggerFlinkToHdfsTask(){
         CompletableFuture.runAsync(flinkToHdfsTask :: trigger);
+        return "OK";
+    }
+
+
+    @Autowired
+    private HdfsFileCheck hdfsFileCheck;
+
+    @GetMapping("/file-check")
+    public String lengthCheck(){
+        CompletableFuture.runAsync(hdfsFileCheck :: check);
         return "OK";
     }
 }
