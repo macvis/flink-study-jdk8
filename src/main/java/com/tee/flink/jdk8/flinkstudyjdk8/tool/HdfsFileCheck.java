@@ -20,7 +20,7 @@ public class HdfsFileCheck {
     public void check(){
         try{
             FileSystem fs = FileSystem.get(new URI("hdfs://47.243.131.115:8020/"));
-//            fs.delete(new Path("/user/hive/warehouse/hdfs"), true);
+//            fs.delete(new Path("/user/hive/warehouse/hdfs/demo.csv"), true);
 //
             Path dirPath = new Path("/user/hive/warehouse/hdfs/demo.csv");
             FileStatus[] fileStatuses = fs.listStatus(dirPath);
