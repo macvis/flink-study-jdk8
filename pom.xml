@@ -81,6 +81,12 @@
 
         <dependency>
             <groupId>com.ververica</groupId>
+            <artifactId>flink-connector-mysql-cdc</artifactId>
+            <version>${flink-connector.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.ververica</groupId>
             <artifactId>flink-connector-oracle-cdc</artifactId>
             <version>${flink-connector.version}</version>
         </dependency>
