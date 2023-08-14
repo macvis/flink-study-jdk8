@@ -1,5 +1,6 @@
 package com.tee.flink.jdk8.flinkstudyjdk8.tool;
 
+import com.tee.flink.jdk8.flinkstudyjdk8.task.HdfsWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.core.fs.FileStatus;
 import org.apache.flink.core.fs.FileSystem;
@@ -15,7 +16,7 @@ import java.util.stream.Stream;
  */
 @Slf4j
 @Component
-public class HdfsFileCheck {
+public class HdfsFileTool {
 
     public void check(){
         try{
@@ -31,6 +32,19 @@ public class HdfsFileCheck {
         }catch(Exception e){
             log.error("", e);
         }
+    }
+
+    public void delete(){
+        try{
+            FileSystem fs = FileSystem.get(new URI("hdfs://47.243.131.115:8020/"));
+            fs.delete(new Path("/user/hive/warehouse/hdfs/2023-08-13--21"), true);
+        }catch(Exception e){
+            log.error("", e);
+        }
+    }
+
+    public static void main(String[] args) {
+        new HdfsFileTool().delete();
     }
 }
 

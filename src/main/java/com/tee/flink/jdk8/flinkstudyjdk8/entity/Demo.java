@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Demo {
-    private Long id;
+    private Integer id;
 
     private String actor;
 

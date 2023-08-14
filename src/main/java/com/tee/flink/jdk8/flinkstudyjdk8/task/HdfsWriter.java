@@ -22,7 +22,7 @@ public class HdfsWriter {
     public void trigger(){
         try{
             System.setProperty("HADOOP_USER_NAME", "root");
-            String host = "hdfs://47.243.131.115:8020";
+            String host = "hdfs://47.97.113.63:8020";
             String dest =  host + "/user/hive/warehouse/hdfs/";
 
             Configuration conf = new Configuration();
