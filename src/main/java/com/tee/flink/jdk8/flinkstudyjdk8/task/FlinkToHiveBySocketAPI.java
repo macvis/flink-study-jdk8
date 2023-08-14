@@ -18,6 +18,7 @@ import org.apache.flink.util.Collector;
  * @date 2023/8/8.
  */
 @Slf4j
+@Deprecated
 public class FlinkToHiveBySocketAPI {
 
     public static void main(String[] args) {

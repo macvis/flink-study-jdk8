@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@Deprecated
 public class MySqlToHdfsTask {
 
     public static void main(String[] args) {

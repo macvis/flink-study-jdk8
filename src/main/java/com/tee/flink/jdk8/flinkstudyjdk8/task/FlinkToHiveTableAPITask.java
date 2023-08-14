@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@Deprecated
 public class FlinkToHiveTableAPITask {
 
     public static void main(String[] args) {

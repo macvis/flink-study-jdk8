@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
  * @date 2023/8/13.
  */
 @Slf4j
+@Deprecated
 public class MySqlCdcToHdfsTask {
 
     public static void main(String[] args) {

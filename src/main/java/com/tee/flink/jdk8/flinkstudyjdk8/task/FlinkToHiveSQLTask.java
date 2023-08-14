@@ -32,6 +32,7 @@ import java.util.Properties;
  */
 @Slf4j
 @Component
+@Deprecated
 public class FlinkToHiveSQLTask {
 
     public static void main(String[] args) {

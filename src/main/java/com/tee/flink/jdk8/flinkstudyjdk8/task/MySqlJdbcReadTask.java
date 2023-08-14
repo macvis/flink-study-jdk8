@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@Deprecated
 public class MySqlJdbcReadTask {
 
     public static void main(String[] args) {

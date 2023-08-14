@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Component
+@Deprecated
 public class FlinkToHdfsTask {
 
     public static void main(String[] args) {
