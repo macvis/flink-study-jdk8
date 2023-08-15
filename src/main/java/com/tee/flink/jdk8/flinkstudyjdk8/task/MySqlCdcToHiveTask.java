@@ -30,13 +30,18 @@ public class MySqlCdcToHiveTask {
         EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().build();
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, settings);
 
+        System.setProperty("HADOOP_USER_NAME", "root");
+
+//        tEnv.getConfig().getConfiguration().setBoolean("hive.metastore.execute.setugi", false);
+//        tEnv.getConfig().getConfiguration().setString("hive.metastore.execute.user", "root");
+
         // 配置 Hive 连接
         // Hive Catalog 名称
-        String hiveCatalogName = "demo_catalog";
+        String hiveCatalogName = "default";
         // Hive 数据库名称
         String hiveDatabaseName = "demo_schema";
         // Hive 配置目录路径
-        String hiveConfDir = "/Users/Tee/Downloads/aliyun";
+        String hiveConfDir = "/Users/Tee/FPI-Tech/bidata_study/xiehong-aliyun";
 
         HiveCatalog hiveCatalog = new HiveCatalog(hiveCatalogName, hiveDatabaseName, hiveConfDir);
         tEnv.registerCatalog(hiveCatalogName, hiveCatalog);
