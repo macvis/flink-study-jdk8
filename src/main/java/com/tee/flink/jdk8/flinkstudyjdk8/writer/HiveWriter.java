@@ -19,7 +19,7 @@ public class HiveWriter extends RichSinkFunction<JSONObject> {
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
         Class.forName("com.mysql.jdbc.Driver");
-        Connection con = DriverManager.getConnection("jdbc:hive2://47.97.113.63:10000/demo_schema", "", "");
+        Connection con = DriverManager.getConnection("jdbc:hive2://47.243.131.115:10001/demo_schema", "", "");
         st = con.createStatement();
     }
 

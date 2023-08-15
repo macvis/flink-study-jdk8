@@ -121,14 +121,14 @@ public class FlinkToHiveSQLTask {
 //                .column("alias", DataTypes.STRING())
 //                .build();
 
-//        FlinkKafkaConsumerBase<Demo> consumer = new FlinkKafkaConsumer<>(
-//                "flink-cdc-topic",
-//                new JsonDeserializationSchema<>(Demo.class),
-//                properties
-//        ).setStartFromEarliest();
+        FlinkKafkaConsumerBase<Demo> consumer = new FlinkKafkaConsumer<>(
+                "flink-cdc-topic",
+                new JsonDeserializationSchema<>(Demo.class),
+                properties
+        ).setStartFromEarliest();
 
 
-//        DataStream<Demo> ds = env.addSource(consumer);
+        DataStream<Demo> ds = env.addSource(consumer);
 
 //        DataStream<Demo> ds2 = ds.map(str -> {
 //            JSONObject jsonObject = JSON.parseObject(str);
@@ -141,7 +141,7 @@ public class FlinkToHiveSQLTask {
 //            return row;
 //        });
 
-//        tableEnv.registerDataStream("merged_demo", ds);
+        tableEnv.registerDataStream("merged_demo", ds);
 
 //        Schema schema = Schema.newBuilder()
 //                .column("id", DataTypes.INT())
