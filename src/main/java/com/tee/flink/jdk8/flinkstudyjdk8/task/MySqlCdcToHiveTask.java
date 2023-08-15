@@ -2,6 +2,9 @@ package com.tee.flink.jdk8.flinkstudyjdk8.task;
 
 import com.ververica.cdc.connectors.mysql.source.MySqlSource;
 import com.ververica.cdc.connectors.mysql.table.StartupOptions;
+import com.ververica.cdc.debezium.JsonDebeziumDeserializationSchema;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
@@ -9,12 +12,12 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.catalog.hive.HiveCatalog;
-import org.apache.flink.table.data.RowData;
 
 /**
  * @author youchao.wen
  * @date 2023/8/14.
  */
+@Slf4j
 public class MySqlCdcToHiveTask {
 
     public static void main(String[] args) {
@@ -28,24 +31,27 @@ public class MySqlCdcToHiveTask {
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, settings);
 
         // 配置 Hive 连接
-        String hiveCatalogName = "default_catalog";  // Hive Catalog 名称
-        String hiveDatabaseName = "demo_schema";  // Hive 数据库名称
-        String hiveConfDir = "/Users/Tee/Downloads/aliyun";  // Hive 配置目录路径
+        // Hive Catalog 名称
+        String hiveCatalogName = "demo_catalog";
+        // Hive 数据库名称
+        String hiveDatabaseName = "demo_schema";
+        // Hive 配置目录路径
+        String hiveConfDir = "/Users/Tee/Downloads/aliyun";
 
         HiveCatalog hiveCatalog = new HiveCatalog(hiveCatalogName, hiveDatabaseName, hiveConfDir);
         tEnv.registerCatalog(hiveCatalogName, hiveCatalog);
         tEnv.useCatalog(hiveCatalogName);
 
         // MySQL 连接配置
-        String hostname = "localhost";  // MySQL 主机名
-        int port = 3306;  // MySQL 端口号
-        String username = "root";  // MySQL 用户名
-        String password = "1234567890";  // MySQL 密码
-        String databaseName = "flinkdemo";  // MySQL 数据库名称
-        String tableName = "demo";  // MySQL 表名称
+        String hostname = "localhost";
+        int port = 3306;
+        String username = "root";
+        String password = "1234567890";
+        String databaseName = "flinkdemo";
+        String tableName = "demo";
 
         // 创建 MySQLDebeziumSource 同步器
-        MySqlSource source = MySqlSource.builder()
+        MySqlSource<String> mySqlSource = MySqlSource.<String>builder()
                 .hostname(hostname)
                 .port(port)
                 .username(username)
@@ -53,34 +59,34 @@ public class MySqlCdcToHiveTask {
                 .databaseList(databaseName)
                 .tableList(databaseName + "." + tableName)
                 .startupOptions(StartupOptions.initial())
+                .deserializer(new JsonDebeziumDeserializationSchema())
                 .build();
 
-        // 从 MySQL CDC 读取数据流
-        DataStream<RowData> dataStream = env.addSource(source)
-                .map(debeziumRecord -> {
-                    // 在这里根据 CDC 记录解析并返回 Flink 的 RowData 对象
-                    return null;
-                });
+        DataStream<String> dataStream =
+                env.fromSource(mySqlSource, WatermarkStrategy.noWatermarks(), "MySQL Source");
 
         // 将数据流转换为表
         Table table = tEnv.fromDataStream(dataStream);
 
         // 注册表
-        tEnv.createTemporaryView("<table-name>", table);
+        tEnv.createTemporaryView("demo_cdc", table);
 
         // 将表数据写入 Hive 表
-        String hiveTableName = "<hive-table-name>";
+        String hiveTableName = "cdc_demo";
         String hiveSinkDDL = "CREATE TABLE IF NOT EXISTS " + hiveDatabaseName + "." + hiveTableName +
-                " (col1 STRING, col2 INT, ..., colN DECIMAL) " +
+                " (id INT, actor STRING, alias STRING) " +
                 " STORED AS PARQUET ";
 
         tEnv.executeSql(hiveSinkDDL);
 
         TableResult tableResult = tEnv.executeSql("INSERT INTO " + hiveDatabaseName + "." + hiveTableName +
-                " SELECT * FROM <table-name>");
+                " SELECT * FROM demo_cdc");
 
-        // 执行作业
-        env.execute();
-    }
+        try{
+            // 执行作业
+            env.execute();
+        }catch(Exception e){
+            log.error("", e);
+        }
     }
 }
