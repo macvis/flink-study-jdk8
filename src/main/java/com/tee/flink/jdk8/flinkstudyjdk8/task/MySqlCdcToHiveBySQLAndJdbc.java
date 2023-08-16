@@ -43,7 +43,7 @@ public class MySqlCdcToHiveBySQLAndJdbc {
         // 设置并发
         env.setParallelism(1);
         //设置checkpoint
-        env.enableCheckpointing(60000, CheckpointingMode.EXACTLY_ONCE);
+        env.enableCheckpointing(6000, CheckpointingMode.EXACTLY_ONCE);
         env.getCheckpointConfig().setCheckpointStorage(hdfsHost + "/user/checkpoint");
         // 设置Flink SQL环境
         EnvironmentSettings tableEnvSettings = EnvironmentSettings.inStreamingMode();
@@ -65,6 +65,7 @@ public class MySqlCdcToHiveBySQLAndJdbc {
                 "  'password' = '1234567890',\n" +
                 "  'database-name' = 'flinkdemo',\n" +
                 "  'table-name' = 'demo_for_hive'\n" +
+                "  , 'debezium.snapshot.mode' = 'never'\n" +
                 ")");
 
         // 创建kafka source
