@@ -19,14 +19,14 @@ public class FlinkMysqlJdbcToHiveTask {
     }
 
     public void trigger(){
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        DataStreamSource<JSONObject> mysqlData = env.addSource(new MysqlReader());
-        mysqlData.addSink(new HiveJdbcSink().tableName("demo"));
-        mysqlData.print();
-        try{
-            env.execute("Mysql2Hive");
-        }catch(Exception e){
-            log.error("", e);
-        }
+//        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+//        DataStreamSource<JSONObject> mysqlData = env.addSource(new MysqlReader());
+//        mysqlData.addSink(new HiveJdbcSink().tableName("demo"));
+//        mysqlData.print();
+//        try{
+//            env.execute("Mysql2Hive");
+//        }catch(Exception e){
+//            log.error("", e);
+//        }
     }
 }

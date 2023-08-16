@@ -1,9 +1,11 @@
 package com.tee.flink.jdk8.flinkstudyjdk8.task;
 
-import com.alibaba.fastjson.JSONObject;
+import com.tee.flink.jdk8.flinkstudyjdk8.pojo.dto.CdcDataJsonDTO;
+import com.tee.flink.jdk8.flinkstudyjdk8.processor.KafkaMsgProcessor;
 import com.tee.flink.jdk8.flinkstudyjdk8.serde.JsonDeserializationSchema;
 import com.tee.flink.jdk8.flinkstudyjdk8.sink.HiveJdbcSink;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -12,6 +14,7 @@ import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumerBase;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.catalog.hive.HiveCatalog;
+import org.springframework.stereotype.Component;
 
 import java.util.Properties;
 
@@ -20,6 +23,7 @@ import java.util.Properties;
  * @date 2023/8/15.
  */
 @Slf4j
+@Component
 public class MySqlCdcToHiveBySQLAndJdbc {
 
 
@@ -65,7 +69,7 @@ public class MySqlCdcToHiveBySQLAndJdbc {
 
         // 创建kafka source
         tableEnv.executeSql("CREATE DATABASE IF NOT EXISTS kafka");
-        tableEnv.executeSql("DROP TABLE IF EXISTS kafka.order_info");
+        tableEnv.executeSql("DROP TABLE IF EXISTS kafka.demo");
         tableEnv.executeSql("CREATE TABLE kafka.demo (\n" +
                 "  id INT PRIMARY KEY NOT ENFORCED,\n" +
                 "  actor STRING,\n" +
@@ -73,7 +77,7 @@ public class MySqlCdcToHiveBySQLAndJdbc {
                 ") WITH (\n" +
                 "'connector' = 'kafka',\n" +
                 "'topic' = 'flink-cdc-topic',\n" +
-                "'scan.startup.mode' = 'earliest-offset',\n" +
+                "'scan.startup.mode' = 'latest-offset',\n" +
                 "'properties.bootstrap.servers' = 'localhost:9092',\n" +
                 "'format' = 'debezium-json'\n" +
                 ")");
@@ -87,17 +91,32 @@ public class MySqlCdcToHiveBySQLAndJdbc {
         Properties kafkaConfig = new Properties();
         kafkaConfig.setProperty("bootstrap.servers", "localhost:9092");
         kafkaConfig.setProperty("group.id", "flink-cdc-group");
-        kafkaConfig.setProperty("auto.offset.reset", "earliest");
+        kafkaConfig.setProperty("auto.offset.reset", "latest");
+        kafkaConfig.setProperty("enable.auto.commit", "true");
+        kafkaConfig.setProperty("auto.commit.interval.ms", "100");
 
-        FlinkKafkaConsumerBase<JSONObject> consumer = new FlinkKafkaConsumer<>(
+
+        FlinkKafkaConsumerBase<CdcDataJsonDTO> kafkaSource = new FlinkKafkaConsumer<>(
                 "flink-cdc-topic", new JsonDeserializationSchema(), kafkaConfig)
                 // 从最新的消息取的数据，适合增量写入
-//                .setStartFromLatest();
+                .setStartFromLatest()
                 // 全量 kafka 消息，适合初次同步或者故障恢复
-                // .setStartFromEarliest();
+//                 .setStartFromEarliest()
                 .setCommitOffsetsOnCheckpoints(true);
-        DataStreamSource<JSONObject> streamSource = env.addSource(consumer);
-        streamSource.addSink(new HiveJdbcSink().tableName("demo_cdc"));
+
+//        KafkaSource<CdcDataJsonDTO> kafkaSource = KafkaSource.<CdcDataJsonDTO>builder()
+//                .setBootstrapServers("localhost:9092")
+//                .setTopics("flink-cdc-topic")
+//                .setDeserializer(new KafkaJsonMsgDeserializer())
+//                .setStartingOffsets(OffsetsInitializer.latest())
+//                .setProperties(kafkaConfig)
+//                .build();
+
+        DataStreamSource<CdcDataJsonDTO> streamSource = env.addSource(kafkaSource);
+        streamSource.assignTimestampsAndWatermarks(WatermarkStrategy.forMonotonousTimestamps())
+                .keyBy(value -> value)
+                .process(new KafkaMsgProcessor())
+                .addSink(new HiveJdbcSink().tableName("demo_cdc"));
 
 
         try {

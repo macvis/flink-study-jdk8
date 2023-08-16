@@ -1,6 +1,9 @@
 package com.tee.flink.jdk8.flinkstudyjdk8.sink;
 
 import com.alibaba.fastjson.JSONObject;
+import com.tee.flink.jdk8.flinkstudyjdk8.enums.OperationEnum;
+import com.tee.flink.jdk8.flinkstudyjdk8.pojo.dto.CdcDataJsonDTO;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 
@@ -15,7 +18,8 @@ import java.util.concurrent.ExecutionException;
  * @author youchao.wen
  * @date 2023/8/14.
  */
-public class HiveJdbcSink extends RichSinkFunction<JSONObject> {
+@Slf4j
+public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
     private transient Statement st = null;
 
     private String tableName;
@@ -47,32 +51,66 @@ public class HiveJdbcSink extends RichSinkFunction<JSONObject> {
     }
 
     @Override
-    public void invoke(JSONObject json, Context context) throws Exception {
-        Integer id = json.getInteger("id");
+    public void invoke(CdcDataJsonDTO cdcData, Context context) throws Exception {
 
-
-        // 检查数据是否存在
-        String query = "select * from demo_schema." + this.tableName + " where id=" + id;
-        ResultSet rs = st.executeQuery(query);
-        if(rs != null && rs.next() == true){
-            System.out.println("id = " + id + "的数据已存在");
-            return;
+        String op = cdcData.getOp();
+        OperationEnum opEnum = OperationEnum.getByCode(op);
+        switch (opEnum){
+            case CREATE:
+                doInsert(cdcData.getAfter());
+                break;
+            case UPDATE:
+                doDelete(cdcData.getBefore());
+                doInsert(cdcData.getAfter());
+                break;
+            case DELETE:
+                doDelete(cdcData.getBefore());
+                break;
+            default:
+                break;
         }
 
-        String actor = json.getString("actor");
-        String alias = json.getString("alias");
-        String insert = "insert into demo_schema." + this.tableName + "(id, actor, alias) VALUES ({id}, '{actor}', '{alias}')"
-                .replace("{id}", Integer.toString(id))
-                .replace("{actor}", actor)
-                .replace("{alias}", alias);
-
-        System.out.println("insert: " + insert);
-        st.execute(insert);
 
         // 每次写入完成后，将 completionFuture 标记为已完成
         if (completionFuture != null && !completionFuture.isDone()) {
             completionFuture.complete(null);
         }
+    }
+
+    private void doInsert(JSONObject data) throws Exception{
+        Integer id = data.getInteger("id");
+
+        // 检查数据是否存在
+        String query = "select * from demo_schema." + this.tableName + " where id=" + id;
+        ResultSet rs = st.executeQuery(query);
+        if(rs != null && rs.next()){
+//            System.out.println("id = " + id + "的数据已存在");
+            log.info("id={}的数据已存在", id);
+            return;
+        }
+
+        String actor = data.getString("actor");
+        String alias = data.getString("alias");
+        String insert = "insert into demo_schema." + this.tableName + "(id, actor, alias) VALUES ({id}, '{actor}', '{alias}')"
+                .replace("{id}", Integer.toString(id))
+                .replace("{actor}", actor)
+                .replace("{alias}", alias);
+
+//        System.out.println("insert: " + insert);
+        log.info("hive insert SQL = {}", insert);
+        st.execute(insert);
+        st.close();
+    }
+
+
+    private void doDelete(JSONObject data) throws Exception{
+        Integer id = data.getInteger("id");
+        String delete = "delete from demo_schema." + this.tableName + " where id={id}"
+                .replace("{id}", Integer.toString(id));
+        //        System.out.println("insert: " + insert);
+        log.info("hive delete SQL = {}", delete);
+        st.execute(delete);
+        st.close();
     }
 
     // 在预提交阶段等待所有写入任务完成

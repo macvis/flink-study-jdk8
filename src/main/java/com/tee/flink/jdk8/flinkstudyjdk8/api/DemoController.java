@@ -1,8 +1,10 @@
 package com.tee.flink.jdk8.flinkstudyjdk8.api;
 
+import com.ibm.icu.impl.UBiDiProps;
 import com.tee.flink.jdk8.flinkstudyjdk8.task.FlinkToHdfsTask;
 import com.tee.flink.jdk8.flinkstudyjdk8.task.FlinkToHiveSQLTask;
 import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlCdcReadTask;
+import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlCdcToHiveBySQLAndJdbc;
 import com.tee.flink.jdk8.flinkstudyjdk8.task.MySqlJdbcReadTask;
 import com.tee.flink.jdk8.flinkstudyjdk8.tool.HdfsFileTool;
 import lombok.extern.slf4j.Slf4j;
@@ -61,7 +63,7 @@ public class DemoController {
 
     @GetMapping("/file-check")
     public String lengthCheck(){
-        CompletableFuture.runAsync(hdfsFileTool:: check);
+        CompletableFuture.runAsync(hdfsFileTool :: check);
         return "OK";
     }
 
@@ -69,6 +71,14 @@ public class DemoController {
     public String fileDelete(){
         hdfsFileTool.delete();
 
+        return "OK";
+    }
+
+    @Autowired
+    private MySqlCdcToHiveBySQLAndJdbc mySqlCdcToHiveBySQLAndJdbc;
+    @GetMapping("/hive-write")
+    public String mysqlCdcToHiveJdbc(){
+        CompletableFuture.runAsync(mySqlCdcToHiveBySQLAndJdbc :: trigger);
         return "OK";
     }
 
