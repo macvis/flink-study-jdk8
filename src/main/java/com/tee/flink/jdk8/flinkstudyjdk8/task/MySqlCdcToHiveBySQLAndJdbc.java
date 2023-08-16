@@ -20,11 +20,11 @@ import java.util.Properties;
  * @date 2023/8/15.
  */
 @Slf4j
-public class MySqlCdcToHiveBySQL {
+public class MySqlCdcToHiveBySQLAndJdbc {
 
 
     public static void main(String[] args) {
-        new MySqlCdcToHiveBySQL().trigger();
+        new MySqlCdcToHiveBySQLAndJdbc().trigger();
     }
 
     public void trigger() {
@@ -34,10 +34,13 @@ public class MySqlCdcToHiveBySQL {
 
         System.setProperty("HADOOP_USER_NAME", "root");
 
+        String hdfsHost = "hdfs://47.243.131.115:8020";
+
         // 设置并发
         env.setParallelism(1);
         //设置checkpoint
         env.enableCheckpointing(60000, CheckpointingMode.EXACTLY_ONCE);
+        env.getCheckpointConfig().setCheckpointStorage(hdfsHost + "/user/checkpoint");
         // 设置Flink SQL环境
         EnvironmentSettings tableEnvSettings = EnvironmentSettings.inStreamingMode();
         // 创建table Env
