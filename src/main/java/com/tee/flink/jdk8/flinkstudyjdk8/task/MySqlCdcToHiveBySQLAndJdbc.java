@@ -1,13 +1,15 @@
 package com.tee.flink.jdk8.flinkstudyjdk8.task;
 
+import com.alibaba.fastjson.JSON;
+import com.tee.flink.jdk8.flinkstudyjdk8.entity.Demo;
 import com.tee.flink.jdk8.flinkstudyjdk8.pojo.dto.CdcDataJsonDTO;
 import com.tee.flink.jdk8.flinkstudyjdk8.processor.KafkaMsgProcessor;
+import com.tee.flink.jdk8.flinkstudyjdk8.serde.AsDemoJsonDeSchema;
 import com.tee.flink.jdk8.flinkstudyjdk8.serde.JsonDeserializationSchema;
 import com.tee.flink.jdk8.flinkstudyjdk8.sink.HiveJdbcSink;
-import com.ververica.cdc.connectors.mysql.table.StartupMode;
+import com.tee.flink.jdk8.flinkstudyjdk8.sink.HiveJdbcUpsertSink;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.state.filesystem.FsStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -48,7 +50,18 @@ public class MySqlCdcToHiveBySQLAndJdbc {
         //设置checkpoint
         env.enableCheckpointing(6000, CheckpointingMode.EXACTLY_ONCE);
         env.getCheckpointConfig().setCheckpointStorage(hdfsHost + "/user/checkpoint");
+
+        // 使用到 hdfs 上的状态存储
         env.setStateBackend(new FsStateBackend(hdfsHost + "/user/checkpoint"));
+
+        // 本地内存, 使用 hashmap 的状态存储
+//        env.setStateBackend(new HashMapStateBackend());
+        try{
+            // rocksDB 方式的状态存储
+//            env.setStateBackend(new RocksDBStateBackend(hdfsHost + "/user/checkpoint", true));
+        }catch(Exception e){
+            log.error("", e);
+        }
 
         // 设置Flink SQL环境
         EnvironmentSettings tableEnvSettings = EnvironmentSettings.inStreamingMode();
@@ -86,11 +99,13 @@ public class MySqlCdcToHiveBySQLAndJdbc {
                 "  actor STRING,\n" +
                 "  alias STRING\n" +
                 ") WITH (\n" +
-                "'connector' = 'kafka',\n" +
+//                "'connector' = 'kafka',\n" +
+//                "'format' = 'debezium-json',\n" +
                 "'topic' = 'flink-cdc-topic',\n" +
-                "'scan.startup.mode' = 'latest-offset',\n" +
-                "'properties.bootstrap.servers' = 'localhost:9092',\n" +
-                "'format' = 'debezium-json'\n" +
+                "'properties.bootstrap.servers' = 'localhost:9092'\n" +
+                ", 'connector' = 'upsert-kafka'\n" +
+                ", 'key.format' = 'json'\n" +
+                ", 'value.format' = 'json'\n" +
                 ")");
 
         // 向kafka表中插入数据
@@ -107,27 +122,31 @@ public class MySqlCdcToHiveBySQLAndJdbc {
         kafkaConfig.setProperty("auto.commit.interval.ms", "100");
 
 
-        FlinkKafkaConsumerBase<CdcDataJsonDTO> kafkaSource = new FlinkKafkaConsumer<>(
-                "flink-cdc-topic", new JsonDeserializationSchema(), kafkaConfig)
+//        FlinkKafkaConsumerBase<CdcDataJsonDTO> kafkaSource = new FlinkKafkaConsumer<>(
+//                "flink-cdc-topic", new JsonDeserializationSchema(), kafkaConfig)
+//                // 从最新的消息取的数据，适合增量写入
+//                .setStartFromLatest()
+//                // 全量 kafka 消息，适合初次同步或者故障恢复
+////                 .setStartFromEarliest()
+//                .setCommitOffsetsOnCheckpoints(true);
+
+        FlinkKafkaConsumerBase<Demo> kafkaSource = new FlinkKafkaConsumer<>(
+                "flink-cdc-topic", new AsDemoJsonDeSchema(), kafkaConfig)
                 // 从最新的消息取的数据，适合增量写入
                 .setStartFromLatest()
                 // 全量 kafka 消息，适合初次同步或者故障恢复
 //                 .setStartFromEarliest()
                 .setCommitOffsetsOnCheckpoints(true);
 
-//        KafkaSource<CdcDataJsonDTO> kafkaSource = KafkaSource.<CdcDataJsonDTO>builder()
-//                .setBootstrapServers("localhost:9092")
-//                .setTopics("flink-cdc-topic")
-//                .setDeserializer(new KafkaJsonMsgDeserializer())
-//                .setStartingOffsets(OffsetsInitializer.latest())
-//                .setProperties(kafkaConfig)
-//                .build();
-
-        DataStreamSource<CdcDataJsonDTO> streamSource = env.addSource(kafkaSource);
+        DataStreamSource<Demo> streamSource = env.addSource(kafkaSource);
         streamSource.assignTimestampsAndWatermarks(WatermarkStrategy.forMonotonousTimestamps())
-                .keyBy(value -> value)
-                .process(new KafkaMsgProcessor())
-                .addSink(new HiveJdbcSink().tableName("demo_cdc"));
+                .keyBy(value -> {
+                    log.info("value = {}", JSON.toJSONString(value));
+                    return value.toString();
+                })
+//                .process(new KafkaMsgProcessor())
+//                .addSink(new HiveJdbcSink().tableName("demo_cdc"));
+                .addSink(new HiveJdbcUpsertSink().tableName("demo_cdc"));
 
 
         try {

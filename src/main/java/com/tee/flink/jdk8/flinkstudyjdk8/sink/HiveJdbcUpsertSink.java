@@ -1,9 +1,7 @@
 package com.tee.flink.jdk8.flinkstudyjdk8.sink;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-import com.tee.flink.jdk8.flinkstudyjdk8.enums.OperationEnum;
-import com.tee.flink.jdk8.flinkstudyjdk8.pojo.dto.CdcDataJsonDTO;
+import com.tee.flink.jdk8.flinkstudyjdk8.entity.Demo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
@@ -17,10 +15,10 @@ import java.util.concurrent.ExecutionException;
 
 /**
  * @author youchao.wen
- * @date 2023/8/14.
+ * @date 2023/8/29.
  */
 @Slf4j
-public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
+public class HiveJdbcUpsertSink extends RichSinkFunction<Demo> {
     private transient Statement st = null;
 
     private String tableName;
@@ -28,7 +26,7 @@ public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
 
     private CompletableFuture<Void> completionFuture;
 
-    public HiveJdbcSink tableName(String tableName){
+    public HiveJdbcUpsertSink tableName(String tableName){
         this.tableName = tableName;
         return this;
     }
@@ -52,23 +50,12 @@ public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
     }
 
     @Override
-    public void invoke(CdcDataJsonDTO cdcData, Context context) throws Exception {
+    public void invoke(Demo cdcData, Context context) throws Exception {
         log.info("cdcData = {}", JSON.toJSONString(cdcData));
-        String op = cdcData.getOp();
-        OperationEnum opEnum = OperationEnum.getByCode(op);
-        switch (opEnum){
-            case CREATE:
-                doInsert(cdcData.getAfter(), st);
-                break;
-            case UPDATE:
-                doDelete(cdcData.getBefore(), st);
-                doInsert(cdcData.getAfter(), st);
-                break;
-            case DELETE:
-                doDelete(cdcData.getBefore(), st);
-                break;
-            default:
-                break;
+        if(this.existed(cdcData.getId(), st)){
+            this.doUpdate(cdcData, st);
+        }else{
+            this.doInsert(cdcData, st);
         }
 
         st.close();
@@ -79,19 +66,23 @@ public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
         }
     }
 
-    private void doInsert(JSONObject data, Statement st) throws Exception{
-        Integer id = data.getInteger("id");
-
+    private boolean existed(int id, Statement st) throws Exception{
         // 检查数据是否存在
         String query = "select * from demo_schema." + this.tableName + " where id=" + id;
         ResultSet rs = st.executeQuery(query);
         if(rs != null && rs.next()){
             log.info("id={}的数据已存在", id);
-            return;
+            return true;
         }
 
-        String actor = data.getString("actor");
-        String alias = data.getString("alias");
+        return false;
+    }
+
+    private void doInsert(Demo data, Statement st) throws Exception{
+        Integer id = data.getId();
+
+        String actor = data.getActor();
+        String alias = data.getAlias();
         String insert = "insert into demo_schema." + this.tableName + "(id, actor, alias) VALUES ({id}, '{actor}', '{alias}')"
                 .replace("{id}", Integer.toString(id))
                 .replace("{actor}", actor)
@@ -102,13 +93,29 @@ public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
     }
 
 
-    private synchronized void doDelete(JSONObject data, Statement st) {
-        Integer id = data.getInteger("id");
+    private synchronized void doDelete(Demo data, Statement st) {
+        Integer id = data.getId();
         String delete = "delete from demo_schema." + this.tableName + " where id={id}"
                 .replace("{id}", Integer.toString(id));
         try{
             log.info("hive delete SQL = {}", delete);
             st.execute(delete);
+        }catch(Exception e){
+            log.error("delete error", e);
+        }
+    }
+
+    private synchronized void doUpdate(Demo data, Statement st){
+        Integer id = data.getId();
+        String update = "update demo_schema." + this.tableName
+                + " set actor={actor}, alias={alias}"
+                + " where id={id}"
+                .replace("{id}", Integer.toString(id))
+                .replace("{actor}", data.getActor())
+                .replace("{alias}", data.getAlias());
+        try{
+            log.info("hive delete SQL = {}", update);
+            st.execute(update);
         }catch(Exception e){
             log.error("delete error", e);
         }

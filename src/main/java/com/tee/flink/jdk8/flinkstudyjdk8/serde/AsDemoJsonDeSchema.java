@@ -1,8 +1,7 @@
 package com.tee.flink.jdk8.flinkstudyjdk8.serde;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-import com.tee.flink.jdk8.flinkstudyjdk8.enums.OperationEnum;
+import com.tee.flink.jdk8.flinkstudyjdk8.entity.Demo;
 import com.tee.flink.jdk8.flinkstudyjdk8.pojo.dto.CdcDataJsonDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
@@ -16,21 +15,21 @@ import java.io.IOException;
  * @date 2023/8/15.
  */
 @Slf4j
-public class JsonDeserializationSchema implements DeserializationSchema<CdcDataJsonDTO> {
+public class AsDemoJsonDeSchema implements DeserializationSchema<Demo> {
     @Override
-    public CdcDataJsonDTO deserialize(byte[] message) throws IOException {
+    public Demo deserialize(byte[] message) throws IOException {
         String str = new String(message);
         log.info("cdc消息详情 = {}", str);
-        return JSON.parseObject(str, CdcDataJsonDTO.class);
+        return JSON.parseObject(str, Demo.class);
     }
 
     @Override
-    public boolean isEndOfStream(CdcDataJsonDTO nextElement) {
+    public boolean isEndOfStream(Demo nextElement) {
         return false;
     }
 
     @Override
-    public TypeInformation<CdcDataJsonDTO> getProducedType() {
-        return TypeExtractor.getForClass(CdcDataJsonDTO.class);
+    public TypeInformation<Demo> getProducedType() {
+        return TypeExtractor.getForClass(Demo.class);
     }
 }
