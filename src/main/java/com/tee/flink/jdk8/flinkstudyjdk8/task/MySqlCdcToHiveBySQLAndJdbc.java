@@ -4,8 +4,11 @@ import com.tee.flink.jdk8.flinkstudyjdk8.pojo.dto.CdcDataJsonDTO;
 import com.tee.flink.jdk8.flinkstudyjdk8.processor.KafkaMsgProcessor;
 import com.tee.flink.jdk8.flinkstudyjdk8.serde.JsonDeserializationSchema;
 import com.tee.flink.jdk8.flinkstudyjdk8.sink.HiveJdbcSink;
+import com.ververica.cdc.connectors.mysql.table.StartupMode;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.state.filesystem.FsStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -45,6 +48,8 @@ public class MySqlCdcToHiveBySQLAndJdbc {
         //设置checkpoint
         env.enableCheckpointing(6000, CheckpointingMode.EXACTLY_ONCE);
         env.getCheckpointConfig().setCheckpointStorage(hdfsHost + "/user/checkpoint");
+        env.setStateBackend(new FsStateBackend(hdfsHost + "/user/checkpoint"));
+
         // 设置Flink SQL环境
         EnvironmentSettings tableEnvSettings = EnvironmentSettings.inStreamingMode();
         // 创建table Env
@@ -65,7 +70,12 @@ public class MySqlCdcToHiveBySQLAndJdbc {
                 "  'password' = '1234567890',\n" +
                 "  'database-name' = 'flinkdemo',\n" +
                 "  'table-name' = 'demo_for_hive'\n" +
-                "  , 'debezium.snapshot.mode' = 'never'\n" +
+                // 这个配置代表读 binlog 快照时，配置读取模式，默认是 initial，即从头读，全量读取，即每一次都是全量读取
+                // schema-only表示仅读取表结构，never 表示不操作
+                "  , 'debezium.snapshot.mode' = 'initial'\n" +
+                // 这个参数配置读取 binlog 的位置，不配置则一直读取全量 binlog
+                // latest-offset 表示从最新位置开始读，即实时读取
+                "  , 'scan.startup.mode' = 'latest-offset'\n" +
                 ")");
 
         // 创建kafka source

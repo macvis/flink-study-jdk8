@@ -25,6 +25,8 @@ public class MysqlReader extends RichSourceFunction<JSONObject> {
         st.setFetchSize(3);
     }
 
+
+
     @Override
     public void run(SourceContext<JSONObject> ctx) throws Exception {
 

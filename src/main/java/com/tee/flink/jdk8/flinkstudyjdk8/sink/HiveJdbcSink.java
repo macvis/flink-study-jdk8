@@ -35,7 +35,7 @@ public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
-        Class.forName("com.mysql.jdbc.Driver");
+        Class.forName("org.apache.hive.jdbc.HiveDriver");
         Connection con = DriverManager.getConnection("jdbc:hive2://47.243.131.115:10001/demo_schema", "", "");
         st = con.createStatement();
 
@@ -103,7 +103,7 @@ public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
     }
 
 
-    private void doDelete(JSONObject data) throws Exception{
+    private synchronized void doDelete(JSONObject data) throws Exception{
         Integer id = data.getInteger("id");
         String delete = "delete from demo_schema." + this.tableName + " where id={id}"
                 .replace("{id}", Integer.toString(id));
