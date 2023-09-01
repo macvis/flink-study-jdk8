@@ -108,16 +108,15 @@ public class HiveJdbcUpsertSink extends RichSinkFunction<Demo> {
     private synchronized void doUpdate(Demo data, Statement st){
         Integer id = data.getId();
         String update = "update demo_schema." + this.tableName
-                + " set actor={actor}, alias={alias}"
-                + " where id={id}"
+                + " set actor='{actor}', alias='{alias}'  where id={id}"
                 .replace("{id}", Integer.toString(id))
                 .replace("{actor}", data.getActor())
                 .replace("{alias}", data.getAlias());
         try{
-            log.info("hive delete SQL = {}", update);
+            log.info("hive update SQL = {}", update);
             st.execute(update);
         }catch(Exception e){
-            log.error("delete error", e);
+            log.error("update error", e);
         }
     }
 
