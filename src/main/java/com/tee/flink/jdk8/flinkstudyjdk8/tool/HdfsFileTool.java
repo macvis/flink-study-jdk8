@@ -36,8 +36,10 @@ public class HdfsFileTool {
 
     public void delete(){
         try{
-            FileSystem fs = FileSystem.get(new URI("hdfs://47.243.131.115:8020/"));
-            fs.delete(new Path("/user/hive/warehouse/hdfs/2023-08-13--21"), true);
+            System.setProperty("HADOOP_USER_NAME", "hadoop");
+
+            FileSystem fs = FileSystem.get(new URI("hdfs://10.191.20.201:9000/"));
+            fs.delete(new Path("/user/checkpoint"), true);
         }catch(Exception e){
             log.error("", e);
         }

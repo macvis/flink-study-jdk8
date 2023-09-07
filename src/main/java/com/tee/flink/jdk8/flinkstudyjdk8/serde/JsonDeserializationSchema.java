@@ -20,7 +20,7 @@ public class JsonDeserializationSchema implements DeserializationSchema<CdcDataJ
     @Override
     public CdcDataJsonDTO deserialize(byte[] message) throws IOException {
         String str = new String(message);
-//        System.out.println("接收到的信息 = " + str);
+        System.out.println("接收到的信息 = " + str);
         log.info("cdc消息详情 = {}", str);
         return JSON.parseObject(str, CdcDataJsonDTO.class);
     }

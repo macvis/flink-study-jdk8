@@ -58,6 +58,7 @@ public class KafkaMsgProcessor extends ProcessFunction<CdcDataJsonDTO, CdcDataJs
             bufferState.put(offset, buffer);
         }
 
+
         // 检查是否有已排序的连续消息可以输出
         checkAndOutputSortedRecords(out);
     }

@@ -36,7 +36,8 @@ public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
         Class.forName("org.apache.hive.jdbc.HiveDriver");
-        Connection con = DriverManager.getConnection("jdbc:hive2://47.243.131.115:10001/demo_schema", "", "");
+//        Connection con = DriverManager.getConnection("jdbc:hive2://47.243.131.115:10001/demo_schema", "", "");
+        Connection con = DriverManager.getConnection("jdbc:hive2://10.191.20.201:10000/demo_schema", "hadoop", "Fpi@123456");
         st = con.createStatement();
 
         completionFuture = new CompletableFuture<>();
@@ -47,6 +48,7 @@ public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
         super.close();
         if (completionFuture != null && !completionFuture.isDone()) {
             completionFuture.complete(null);
+            st.close();
         }
     }
 
@@ -74,6 +76,7 @@ public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
         // 每次写入完成后，将 completionFuture 标记为已完成
         if (completionFuture != null && !completionFuture.isDone()) {
             completionFuture.complete(null);
+//            st.close();
         }
     }
 
@@ -99,7 +102,7 @@ public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
 //        System.out.println("insert: " + insert);
         log.info("hive insert SQL = {}", insert);
         st.execute(insert);
-        st.close();
+//        st.close();
     }
 
 
@@ -110,7 +113,7 @@ public class HiveJdbcSink extends RichSinkFunction<CdcDataJsonDTO> {
         //        System.out.println("insert: " + insert);
         log.info("hive delete SQL = {}", delete);
         st.execute(delete);
-        st.close();
+//        st.close();
     }
 
     // 在预提交阶段等待所有写入任务完成
